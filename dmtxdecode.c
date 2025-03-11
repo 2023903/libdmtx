@@ -37,8 +37,6 @@ dmtxDecodeCreate(DmtxImage *img, int scale)
    width = dmtxImageGetProp(img, DmtxPropWidth) / scale;
    height = dmtxImageGetProp(img, DmtxPropHeight) / scale;
 
-   dec->fnc1 = DmtxUndefined;
-
    dec->edgeMin = DmtxUndefined;
    dec->edgeMax = DmtxUndefined;
    dec->scanGap = 1;
@@ -105,9 +103,6 @@ dmtxDecodeSetProp(DmtxDecode *dec, int prop, int value)
       case DmtxPropScanGap:
          dec->scanGap = value; /* XXX Should this be scaled? */
          break;
-      case DmtxPropFnc1:
-         dec->fnc1 = value;
-         break;
       case DmtxPropSquareDevn:
          dec->squareDevn = cos(value * (M_PI/180.0));
          break;
@@ -165,8 +160,6 @@ dmtxDecodeGetProp(DmtxDecode *dec, int prop)
          return dec->edgeMax;
       case DmtxPropScanGap:
          return dec->scanGap;
-      case DmtxPropFnc1:
-         return dec->fnc1;
       case DmtxPropSquareDevn:
          return (int)(acos(dec->squareDevn) * 180.0/M_PI);
       case DmtxPropSymbolSize:
@@ -343,7 +336,17 @@ dmtxDecodeMatrixRegion(DmtxDecode *dec, DmtxRegion *reg, int fix)
       return NULL;
    }
 
-   msg->fnc1 = dec->fnc1;
+   /* maybe place remaining logic into new dmtxDecodePopulatedArray()
+      function so other people can pass in their own arrays */
+
+   ModulePlacementEcc200(msg->array, msg->code,
+         reg->sizeIdx, DmtxModuleOnRed | DmtxModuleOnGreen | DmtxModuleOnBlue);
+
+   if(RsDecode(msg->code, reg->sizeIdx, fix) == DmtxFail)
+   {
+      dmtxMessageDestroy(&msg);
+      return NULL;
+   }
 
    topLeft.X = bottomLeft.X = topLeft.Y = topRight.Y = -0.1;
    topRight.X = bottomRight.X = bottomLeft.Y = bottomRight.Y = 1.1;
@@ -364,54 +367,7 @@ dmtxDecodeMatrixRegion(DmtxDecode *dec, DmtxRegion *reg, int fix)
 
    CacheFillQuad(dec, pxTopLeft, pxTopRight, pxBottomRight, pxBottomLeft);
 
-   return dmtxDecodePopulatedArray(reg->sizeIdx, msg, fix);
-}
-
-/**
- * \brief  Ripped out a part of dmtxDecodeMatrixRegion function to this one to parse own array
- * \param  sizeIdx
- * \param  msg
- * \param  fix
- * \return Decoded message (msg pointer) or NULL in case of failure.
- * \note You should reaffect msg with the result of this call
- *       since a NULL result means msg gets freed and should not be used anymore.
- *       ex: msg = dmtxDecodePopulatedArray(sizeidx, msg, fix);
- */
-DmtxMessage *
-dmtxDecodePopulatedArray(int sizeIdx, DmtxMessage *msg, int fix)
-{
-   /*
-    * Example msg->array indices for a 12x12 datamatrix.
-    *  also, the 'L' color (usually black) is defined as 'DmtxModuleOnRGB'
-    *
-    * XX    XX    XX    XX    XX    XX   
-    * XX 0   1  2  3  4  5  6  7  8  9 XX 
-    * XX 10 11 12 13 14 15 16 17 18 19 
-    * XX 20 21 22 23 24 25 26 27 28 29 XX
-    * XX 30 31 32 33 34 35 36 37 38 39 
-    * XX 40 41 42 43 44 45 46 47 48 49 XX
-    * XX 50 51 52 53 54 55 56 57 58 59 
-    * XX 60 61 62 63 64 65 66 67 68 69 XX
-    * XX 70 71 72 73 74 75 76 77 78 79 
-    * XX 80 81 82 83 84 85 86 87 88 89 XX
-    * XX 90 91 92 93 94 95 96 97 98 99 
-    * XX XX XX XX XX XX XX XX XX XX XX XX
-    *
-    */
-    
-   ModulePlacementEcc200(msg->array, msg->code, sizeIdx, DmtxModuleOnRed | DmtxModuleOnGreen | DmtxModuleOnBlue);
-
-   if(RsDecode(msg->code, sizeIdx, fix) == DmtxFail){
-      dmtxMessageDestroy(&msg);
-      msg = NULL;
-      return NULL;
-   }
-
-   if(DecodeDataStream(msg, sizeIdx, NULL) == DmtxFail) {
-      dmtxMessageDestroy(&msg);
-      msg = NULL;
-      return NULL;
-   }
+   DecodeDataStream(msg, reg->sizeIdx, NULL);
 
    return msg;
 }
@@ -655,27 +611,24 @@ TallyModuleJumps(DmtxDecode *dec, DmtxRegion *reg, int tally[][24], int xOrigin,
          tModule = (darkOnLight) ? reg->offColor - color : color - reg->offColor;
 
          if(statusPrev == DmtxModuleOnRGB) {
-            if(tModule < tPrev - jumpThreshold){
+            if(tModule < tPrev - jumpThreshold)
                statusModule = DmtxModuleOff;
-            } else {
+            else
                statusModule = DmtxModuleOnRGB;
-            }
          }
          else if(statusPrev == DmtxModuleOff) {
-            if(tModule > tPrev + jumpThreshold) {
+            if(tModule > tPrev + jumpThreshold)
                statusModule = DmtxModuleOnRGB;
-            } else {
+            else
                statusModule = DmtxModuleOff;
-            }
          }
 
          mapRow = symbolRow - yOrigin;
          mapCol = symbolCol - xOrigin;
          assert(mapRow < 24 && mapCol < 24);
 
-         if(statusModule == DmtxModuleOnRGB){
+         if(statusModule == DmtxModuleOnRGB)
             tally[mapRow][mapCol] += (2 * weight);
-         }
 
          weight--;
       }

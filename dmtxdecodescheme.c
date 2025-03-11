@@ -242,14 +242,6 @@ DecodeSchemeAscii(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd)
          PushOutputWord(msg, digits/10 + '0');
          PushOutputWord(msg, digits - (digits/10)*10 + '0');
       }
-      else if(codeword == DmtxValueFNC1) {
-         if(msg->fnc1 != DmtxUndefined) {
-             int pushword = msg->fnc1;
-             if (ValidOutputWord(pushword) != DmtxTrue)
-                return NULL;
-             PushOutputWord(msg, pushword);
-         }
-      }
    }
 
    return ptr;
@@ -323,9 +315,7 @@ DecodeSchemeC40Text(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd
                PushOutputC40TextWord(msg, &state, c40Values[i] + 69); /* ASCII 91 - 95 */
             }
             else if(c40Values[i] == 27) {
-               if(msg->fnc1 != DmtxUndefined) {
-                   PushOutputC40TextWord(msg, &state, msg->fnc1);
-               }
+               PushOutputC40TextWord(msg, &state, 0x1d); /* FNC1 -- XXX depends on position? */
             }
             else if(c40Values[i] == 30) {
                state.upperShift = DmtxTrue;
@@ -528,7 +518,7 @@ DecodeSchemeBase256(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd
    }
 
    if(ptrEnd > dataEnd)
-      return NULL;
+      exit(40); /* XXX needs cleaner error handling */
 
    while(ptr < ptrEnd)
       PushOutputWord(msg, UnRandomize255State(*(ptr++), idx++));
