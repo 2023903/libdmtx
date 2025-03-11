@@ -24,15 +24,6 @@
 extern DmtxPassFail
 DecodeDataStream(DmtxMessage *msg, int sizeIdx, unsigned char *outputStart)
 {
-   //fprintf(stdout, "libdmtx::DecodeDataStream()\n");
-   //int oned = sqrt(msg->arraySize);
-   //for (int i=0; i<msg->arraySize; i++){
-   //   fprintf(stdout, " %c.", msg->array[i]);
-   //   if (i%oned==oned-1){
-   //      fprintf(stdout, "\n");
-   //   }
-   //}
-
    DmtxBoolean macro = DmtxFalse;
    DmtxScheme encScheme;
    unsigned char *ptr, *dataEnd;
@@ -206,15 +197,18 @@ PushOutputMacroTrailer(DmtxMessage *msg)
  * \param  ptr
  * \param  dataEnd
  * \return Pointer to next undecoded codeword
- *         NULL if an error was detected in the stream
  */
 static unsigned char *
 DecodeSchemeAscii(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd)
 {
-   int upperShift = DmtxFalse;
+   int upperShift;
+   int codeword, digits;
+
+   upperShift = DmtxFalse;
 
    while(ptr < dataEnd) {
-      int codeword = (int)(*ptr);
+
+      codeword = (int)(*ptr);
 
       if(GetEncodationScheme(*ptr) != DmtxSchemeAscii)
          return ptr;
@@ -225,7 +219,7 @@ DecodeSchemeAscii(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd)
          int pushword = codeword + 127;
          if (ValidOutputWord(pushword) != DmtxTrue)
             return NULL;
-         PushOutputWord(msg, pushword);
+         PushOutputWord(msg, codeword + 127);
          upperShift = DmtxFalse;
       }
       else if(codeword == DmtxValueAsciiUpperShift) {
@@ -244,7 +238,7 @@ DecodeSchemeAscii(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd)
          PushOutputWord(msg, codeword - 1);
       }
       else if(codeword <= 229) {
-         int digits = codeword - 130;
+         digits = codeword - 130;
          PushOutputWord(msg, digits/10 + '0');
          PushOutputWord(msg, digits - (digits/10)*10 + '0');
       }
