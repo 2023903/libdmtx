@@ -1,14 +1,11 @@
 /**
  * libdmtx - Data Matrix Encoding/Decoding Library
  * Copyright 2011 Mike Laughton. All rights reserved.
- * Copyright 2012-2016 Vadim A. Misbakh-Soloviov. All rights reserved.
  *
  * See LICENSE file in the main project directory for full
  * terms of use and distribution.
  *
- * Contact:
- * Vadim A. Misbakh-Soloviov <dmtx@mva.name>
- * Mike Laughton <mike@dragonflylogic.com>
+ * Contact: Mike Laughton <mike@dragonflylogic.com>
  *
  * \file dmtxencodeedifact.c
  * \brief Edifact encoding rules
@@ -25,22 +22,6 @@ EncodeNextChunkEdifact(DmtxEncodeStream *stream)
    stream->fnc1 = DmtxUndefined;
    if(StreamInputHasNext(stream))
    {
-      /* Check for FNC1 character, which needs to be sent in ASCII */
-      value = StreamInputPeekNext(stream); CHKERR;
-
-      if((value < 32 || value > 94)) {
-         StreamMarkInvalid(stream, DmtxChannelUnsupportedChar);
-         return;
-      }
-
-      if (stream->fnc1 != DmtxUndefined && (int)value == stream->fnc1) {
-         EncodeChangeScheme(stream, DmtxSchemeAscii, DmtxUnlatchExplicit); CHKERR;
-
-         StreamInputAdvanceNext(stream); CHKERR;
-         AppendValueAscii(stream, DmtxValueFNC1); CHKERR;
-         return;
-      }
-
       value = StreamInputAdvanceNext(stream); CHKERR;
       AppendValueEdifact(stream, value); CHKERR;
    }
@@ -57,11 +38,6 @@ AppendValueEdifact(DmtxEncodeStream *stream, DmtxByte value)
 
    CHKSCHEME(DmtxSchemeEdifact);
 
-   /*
-    *  TODO: KECA -> korean, circles
-    *  TODO: UNOX -> ISO-2022-JP
-    *  TODO: and so on
-    */
    if(value < 31 || value > 94)
    {
       StreamMarkInvalid(stream, DmtxChannelUnsupportedChar);

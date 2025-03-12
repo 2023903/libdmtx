@@ -1,7 +1,6 @@
 /**
  * libdmtx - Data Matrix Encoding/Decoding Library
  * Copyright 2011 Mike Laughton. All rights reserved.
- * Copyright 2012-2016 Vadim A. Misbakh-Soloviov. All rights reserved.
  *
  * See LICENSE file in the main project directory for full
  * terms of use and distribution.
@@ -11,9 +10,7 @@
  * encoder/decoder released by Simon Rockliff in June 1991.
  * ---------------------------------------------------------
  *
- * Contact:
- * Vadim A. Misbakh-Soloviov <dmtx@mva.name>
- * Mike Laughton <mike@dragonflylogic.com>
+ * Contact: Mike Laughton <mike@dragonflylogic.com>
  *
  * \file dmtxreedsol.c
  */
@@ -152,8 +149,7 @@ RsDecode(unsigned char *code, int sizeIdx, int fix)
 {
    int i;
    int blockStride, blockIdx;
-   int blockDataWords, blockErrorWords, blockMaxCorrectable;
-//   int blockDataWords, blockErrorWords, blockTotalWords, blockMaxCorrectable;
+   int blockDataWords, blockErrorWords, blockTotalWords, blockMaxCorrectable;
    int symbolDataWords, symbolErrorWords, symbolTotalWords;
    DmtxBoolean error, repairable;
    DmtxPassFail passFail;
@@ -179,7 +175,7 @@ RsDecode(unsigned char *code, int sizeIdx, int fix)
    {
       /* Data word count depends on blockIdx due to special case at 144x144 */
       blockDataWords = dmtxGetBlockDataSize(sizeIdx, blockIdx);
-//      blockTotalWords = blockErrorWords + blockDataWords;
+      blockTotalWords = blockErrorWords + blockDataWords;
 
       /* Populate received list (rec) with data and error codewords */
       dmtxByteListInit(&rec, 0, 0, &passFail); CHKPASS;
@@ -369,8 +365,7 @@ RsFindErrorLocatorPoly(DmtxByteList *elpOut, const DmtxByteList *syn, int errorW
 
          /* Calculate error location polynomial elp[i] (set 1st term) */
          for(lambda = elp[m].length - 1, j = 0; j <= lambda; j++)
-            elp[iNext].b[j+i-m] = (elp[i - 1].b[j] == 0) ? 0 :
-                  antilog301[(NN - log301[dis.b[m]] +
+            elp[iNext].b[j+i-m] = antilog301[(NN - log301[dis.b[m]] +
                   log301[dis.b[i]] + log301[elp[m].b[j]]) % NN];
 
          /* Calculate error location polynomial elp[i] (add 2nd term) */
