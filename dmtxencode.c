@@ -100,7 +100,7 @@ dmtxEncodeSetProp(DmtxEncode *enc, int prop, int value)
          enc->sizeIdxRequest = value;
          break;
       case DmtxPropFnc1:
-         enc->fnc1 = value;
+         enc->fnc1 = DmtxUndefined;
          break;
 
       /* Presentation details */

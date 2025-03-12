@@ -32,7 +32,7 @@ EncodeNextChunkAscii(DmtxEncodeStream *stream, int option)
 {
    DmtxByte v0, v1;
    DmtxBoolean compactDigits;
-
+   stream->fnc1 = DmtxUndefined;
    if(StreamInputHasNext(stream))
    {
       v0 = StreamInputAdvanceNext(stream); CHKERR;

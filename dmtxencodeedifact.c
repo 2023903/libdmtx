@@ -22,7 +22,7 @@ static void
 EncodeNextChunkEdifact(DmtxEncodeStream *stream)
 {
    DmtxByte value;
-
+   stream->fnc1 = DmtxUndefined;
    if(StreamInputHasNext(stream))
    {
       /* Check for FNC1 character, which needs to be sent in ASCII */
