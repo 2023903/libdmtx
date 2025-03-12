@@ -344,7 +344,7 @@ dmtxDecodeMatrixRegion(DmtxDecode *dec, DmtxRegion *reg, int fix)
       return NULL;
    }
 
-   msg->fnc1 = dec->fnc1;
+   msg->fnc1 = DmtxUndefined;
 
    topLeft.X = bottomLeft.X = topLeft.Y = topRight.Y = -0.1;
    topRight.X = bottomRight.X = bottomLeft.Y = bottomRight.Y = 1.1;
