@@ -1,14 +1,11 @@
 /**
  * libdmtx - Data Matrix Encoding/Decoding Library
  * Copyright 2008, 2009 Mike Laughton. All rights reserved.
- * Copyright 2012-2016 Vadim A. Misbakh-Soloviov. All rights reserved.
  *
  * See LICENSE file in the main project directory for full
  * terms of use and distribution.
  *
- * Contact:
- * Vadim A. Misbakh-Soloviov <dmtx@mva.name>
- * Mike Laughton <mike@dragonflylogic.com>
+ * Contact: Mike Laughton <mike@dragonflylogic.com>
  *
  * \file dmtxencode.c
  * \brief Base encoding logic
@@ -213,7 +210,7 @@ dmtxEncodeDataMatrix(DmtxEncode *enc, int inputSize, unsigned char *inputString)
    assert(bitsPerPixel % 8 == 0);
 
    /* Allocate memory for the image to be generated */
-   pxl = (unsigned char *)malloc(width * height * (bitsPerPixel / 8) + enc->rowPadBytes);
+   pxl = (unsigned char *)malloc(width * height * (bitsPerPixel/8) + enc->rowPadBytes);
    if(pxl == NULL) {
       perror("pixel malloc error");
       return DmtxFail;
@@ -260,7 +257,7 @@ dmtxEncodeDataMosaic(DmtxEncode *enc, int inputSize, unsigned char *inputString)
    int inputSizeR, inputSizeG, inputSizeB;
    int sizeIdxAttempt, sizeIdxFirst, sizeIdxLast;
    int row, col, mappingRows, mappingCols;
-   DmtxEncode *encR, *encG, *encB;
+   DmtxEncode *encG, *encB;
 
    /* Use 1/3 (ceiling) of inputSize establish input size target */
    tmpInputSize = (inputSize + 2) / 3;
@@ -285,38 +282,30 @@ dmtxEncodeDataMosaic(DmtxEncode *enc, int inputSize, unsigned char *inputString)
    else
       sizeIdxLast = sizeIdxFirst;
 
-   encR = encG = encB = NULL;
+   encG = encB = NULL;
 
    /* Try increasing symbol sizes until 3 of them can hold all input values */
    for(sizeIdxAttempt = sizeIdxFirst; sizeIdxAttempt <= sizeIdxLast; sizeIdxAttempt++)
    {
-      dmtxEncodeDestroy(&encR);
       dmtxEncodeDestroy(&encG);
       dmtxEncodeDestroy(&encB);
 
-      encR = dmtxEncodeCreate();
       encG = dmtxEncodeCreate();
       encB = dmtxEncodeCreate();
 
-      /* Copy all settings from master DmtxEncode, including pointer to image
-         and message, which is initially null */
-      *encR = *encG = *encB = *enc;
-
-      dmtxEncodeSetProp(encR, DmtxPropSizeRequest, sizeIdxAttempt);
-      dmtxEncodeSetProp(encG, DmtxPropSizeRequest, sizeIdxAttempt);
-      dmtxEncodeSetProp(encB, DmtxPropSizeRequest, sizeIdxAttempt);
-
-      /* RED LAYER - Holds temporary copy */
-      dmtxEncodeDataMatrix(encR, inputSizeR, inputStringR);
-      if(encR->region.sizeIdx != sizeIdxAttempt)
+      /* RED LAYER - Holds master copy */
+      dmtxEncodeDataMatrix(enc, inputSizeR, inputStringR);
+      if(enc->region.sizeIdx != sizeIdxAttempt)
          continue;
 
       /* GREEN LAYER - Holds temporary copy */
+      *encG = *enc;
       dmtxEncodeDataMatrix(encG, inputSizeG, inputStringG);
       if(encG->region.sizeIdx != sizeIdxAttempt)
          continue;
 
       /* BLUE LAYER - Holds temporary copy */
+      *encB = *enc;
       dmtxEncodeDataMatrix(encB, inputSizeB, inputStringB);
       if(encB->region.sizeIdx != sizeIdxAttempt)
          continue;
@@ -325,27 +314,24 @@ dmtxEncodeDataMosaic(DmtxEncode *enc, int inputSize, unsigned char *inputString)
       break;
    }
 
-   if(encR == NULL || encG == NULL || encB == NULL)
+   if(encG == NULL || encB == NULL)
    {
-      dmtxEncodeDestroy(&encR);
       dmtxEncodeDestroy(&encG);
       dmtxEncodeDestroy(&encB);
       return DmtxFail;
    }
 
-   /* Now we have the correct sizeIdxAttempt, and they all fit into the desired size */
-
-   /* Perform the red portion of the final encode to set internals correctly */
    dmtxEncodeSetProp(enc, DmtxPropSizeRequest, sizeIdxAttempt);
-   dmtxEncodeDataMatrix(enc, inputSizeR, inputStringR);
 
-   /* Zero out the array and overwrite the bits in 3 passes */
+   /* Now we have the correct lengths for splitInputSize, and they all fit into the desired size */
+
    mappingRows = dmtxGetSymbolAttribute(DmtxSymAttribMappingMatrixRows, sizeIdxAttempt);
    mappingCols = dmtxGetSymbolAttribute(DmtxSymAttribMappingMatrixCols, sizeIdxAttempt);
+
    memset(enc->message->array, 0x00, sizeof(unsigned char) *
          enc->region.mappingRows * enc->region.mappingCols);
 
-   ModulePlacementEcc200(enc->message->array, encR->message->code, sizeIdxAttempt, DmtxModuleOnRed);
+   ModulePlacementEcc200(enc->message->array, enc->message->code, sizeIdxAttempt, DmtxModuleOnRed);
 
    /* Reset DmtxModuleAssigned and DMX_MODULE_VISITED bits */
    for(row = 0; row < mappingRows; row++) {
@@ -365,8 +351,7 @@ dmtxEncodeDataMosaic(DmtxEncode *enc, int inputSize, unsigned char *inputString)
 
    ModulePlacementEcc200(enc->message->array, encB->message->code, sizeIdxAttempt, DmtxModuleOnBlue);
 
-   /* Destroy encR, encG, and encB */
-   dmtxEncodeDestroy(&encR);
+   /* Destroy encG and encB */
    dmtxEncodeDestroy(&encG);
    dmtxEncodeDestroy(&encB);
 
@@ -388,7 +373,7 @@ dmtxEncodeDataMosaic(DmtxEncode *enc, int inputSize, unsigned char *inputString)
  *         goes to EncodeSingle... too
  */
 static int
-EncodeDataCodewords(DmtxByteList *input, DmtxByteList *output, int sizeIdxRequest, DmtxScheme scheme, int fnc1)
+EncodeDataCodewords(DmtxByteList *input, DmtxByteList *output, int sizeIdxRequest, DmtxScheme scheme)
 {
    int sizeIdx;
 
@@ -457,29 +442,18 @@ PrintPattern(DmtxEncode *enc)
          moduleStatus = dmtxSymbolModuleStatus(enc->message,
                enc->region.sizeIdx, symbolRow, symbolCol);
 
-		 if (enc->image->bytesPerPixel == 1)
-		 {
-			 for(i = pixelRow; i < pixelRow + enc->moduleSize; i++) {
-				for(j = pixelCol; j < pixelCol + enc->moduleSize; j++) {
-				   rgb[0] = ((moduleStatus & DmtxModuleOnRed) != 0x00) ? 0 : 255;
-				   dmtxImageSetPixelValue(enc->image, j, i, 0, rgb[0]);
-				}
-			 }
-		 }
-		 else
-		 {
-			 for(i = pixelRow; i < pixelRow + enc->moduleSize; i++) {
-				 for(j = pixelCol; j < pixelCol + enc->moduleSize; j++) {
-					 rgb[0] = ((moduleStatus & DmtxModuleOnRed) != 0x00) ? 0 : 255;
-					 rgb[1] = ((moduleStatus & DmtxModuleOnGreen) != 0x00) ? 0 : 255;
-					 rgb[2] = ((moduleStatus & DmtxModuleOnBlue) != 0x00) ? 0 : 255;
-					 /*             dmtxImageSetRgb(enc->image, j, i, rgb); */
-					 dmtxImageSetPixelValue(enc->image, j, i, 0, rgb[0]);
-					 dmtxImageSetPixelValue(enc->image, j, i, 1, rgb[1]);
-					 dmtxImageSetPixelValue(enc->image, j, i, 2, rgb[2]);
-				 }
-			 }
-		 }
+         for(i = pixelRow; i < pixelRow + enc->moduleSize; i++) {
+            for(j = pixelCol; j < pixelCol + enc->moduleSize; j++) {
+               rgb[0] = ((moduleStatus & DmtxModuleOnRed) != 0x00) ? 0 : 255;
+               rgb[1] = ((moduleStatus & DmtxModuleOnGreen) != 0x00) ? 0 : 255;
+               rgb[2] = ((moduleStatus & DmtxModuleOnBlue) != 0x00) ? 0 : 255;
+/*             dmtxImageSetRgb(enc->image, j, i, rgb); */
+               dmtxImageSetPixelValue(enc->image, j, i, 0, rgb[0]);
+               dmtxImageSetPixelValue(enc->image, j, i, 1, rgb[1]);
+               dmtxImageSetPixelValue(enc->image, j, i, 2, rgb[2]);
+            }
+         }
+
       }
    }
 }
