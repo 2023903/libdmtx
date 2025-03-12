@@ -70,6 +70,7 @@ EncodeNextChunkAscii(DmtxEncodeStream *stream, int option)
       }
       else
       {
+         stream->fnc1 = DmtxUndefined;
          /* Encode single ASCII value */
          if(stream->fnc1 != DmtxUndefined && (int)v0 == stream->fnc1)
          {

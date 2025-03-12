@@ -212,7 +212,7 @@ static unsigned char *
 DecodeSchemeAscii(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd)
 {
    int upperShift = DmtxFalse;
-
+   msg->fnc1 = DmtxUndefined;
    while(ptr < dataEnd) {
       int codeword = (int)(*ptr);
 
@@ -279,7 +279,7 @@ DecodeSchemeC40Text(DmtxMessage *msg, unsigned char *ptr, unsigned char *dataEnd
 
    state.shift = DmtxC40TextBasicSet;
    state.upperShift = DmtxFalse;
-
+   msg->fnc1 = DmtxUndefined;
    assert(encScheme == DmtxSchemeC40 || encScheme == DmtxSchemeText);
 
    /* Unlatch is implied if only one codeword remains */
