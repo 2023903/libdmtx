@@ -1,14 +1,11 @@
 /**
  * libdmtx - Data Matrix Encoding/Decoding Library
  * Copyright 2011 Mike Laughton. All rights reserved.
- * Copyright 2012-2016 Vadim A. Misbakh-Soloviov. All rights reserved.
  *
  * See LICENSE file in the main project directory for full
  * terms of use and distribution.
  *
- * Contact:
- * Vadim A. Misbakh-Soloviov <dmtx@mva.name>
- * Mike Laughton <mike@dragonflylogic.com>
+ * Contact: Mike Laughton <mike@dragonflylogic.com>
  *
  * \file dmtxencodebase256.c
  * \brief Base 256 encoding rules
@@ -25,16 +22,6 @@ EncodeNextChunkBase256(DmtxEncodeStream *stream)
 
    if(StreamInputHasNext(stream))
    {
-      /* Check for FNC1 character, which needs to be sent in ASCII */
-      value = StreamInputPeekNext(stream); CHKERR;
-      if(stream->fnc1 != DmtxUndefined && (int)value == stream->fnc1) {
-         EncodeChangeScheme(stream, DmtxSchemeAscii, DmtxUnlatchExplicit);
-
-         StreamInputAdvanceNext(stream); CHKERR;
-         AppendValueAscii(stream, DmtxValueFNC1); CHKERR;
-         return;
-      }
-
       value = StreamInputAdvanceNext(stream); CHKERR;
       AppendValueBase256(stream, value); CHKERR;
    }

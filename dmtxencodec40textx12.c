@@ -1,14 +1,11 @@
 /**
  * libdmtx - Data Matrix Encoding/Decoding Library
  * Copyright 2011 Mike Laughton. All rights reserved.
- * Copyright 2012-2016 Vadim A. Misbakh-Soloviov. All rights reserved.
  *
  * See LICENSE file in the main project directory for full
  * terms of use and distribution.
  *
- * Contact:
- * Vadim A. Misbakh-Soloviov <dmtx@mva.name>
- * Mike Laughton <mike@dragonflylogic.com>
+ * Contact: Mike Laughton <mike@dragonflylogic.com>
  *
  * \file dmtxencodec40textx12.c
  * \brief C40/Text/X12 encoding rules
@@ -33,7 +30,6 @@
 static void
 EncodeNextChunkCTX(DmtxEncodeStream *stream, int sizeIdxRequest)
 {
-   int i;
    DmtxPassFail passFail;
    DmtxByte inputValue;
    DmtxByte valueListStorage[6];
@@ -41,27 +37,6 @@ EncodeNextChunkCTX(DmtxEncodeStream *stream, int sizeIdxRequest)
 
    while(StreamInputHasNext(stream))
    {
-      if(stream->currentScheme == DmtxSchemeX12)
-      {
-          /* Check for FNC1 character */
-          inputValue = StreamInputPeekNext(stream); CHKERR;
-          if(stream->fnc1 != DmtxUndefined && (int)inputValue == stream->fnc1) {
-             /* X12 does not allow partial blocks, resend last 1 or 2 as ASCII */
-             EncodeChangeScheme(stream, DmtxSchemeAscii, DmtxUnlatchExplicit); CHKERR;
-             for(i = 0; i < valueList.length % 3; i++)
-                StreamInputAdvancePrev(stream); CHKERR;
-
-             while(i) {
-                inputValue = StreamInputAdvanceNext(stream); CHKERR;
-                AppendValueAscii(stream, inputValue + 1); CHKERR;
-                i--;
-             }
-
-             StreamInputAdvanceNext(stream); CHKERR;
-             AppendValueAscii(stream, DmtxValueFNC1); CHKERR;
-             return;
-          }
-      }
       inputValue = StreamInputAdvanceNext(stream); CHKERR;
 
       /* Expand next input value into up to 4 CTX values and add to valueList */
@@ -429,7 +404,7 @@ PushCTXValues(DmtxByteList *valueList, DmtxByte inputValue, int targetScheme,
    assert(valueList->length <= 2);
 
    /* Handle extended ASCII with Upper Shift character */
-   if(inputValue > 127 && (fnc1 == DmtxUndefined || (int)inputValue != fnc1))
+   if(inputValue > 127)
    {
       if(targetScheme == DmtxSchemeX12)
       {
@@ -480,14 +455,7 @@ PushCTXValues(DmtxByteList *valueList, DmtxByte inputValue, int targetScheme,
    else
    {
       /* targetScheme is C40 or Text */
-
-      /* Check for FNC1 character */
-      if(fnc1 != DmtxUndefined && (int)inputValue == fnc1)
-      {
-         dmtxByteListPush(valueList, DmtxValueCTXShift2, passFail); RETURN_IF_FAIL;
-         dmtxByteListPush(valueList, 27, passFail); RETURN_IF_FAIL; /* C40 version of FNC1 */
-      }
-      else if(inputValue <= 31)
+      if(inputValue <= 31)
       {
          dmtxByteListPush(valueList, DmtxValueCTXShift1, passFail); RETURN_IF_FAIL;
          dmtxByteListPush(valueList, inputValue, passFail); RETURN_IF_FAIL;
